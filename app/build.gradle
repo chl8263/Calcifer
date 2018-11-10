@@ -29,6 +29,7 @@ android {
 }
 
 dependencies {
+    implementation 'com.google.firebase:firebase-firestore:11.8.0'
     kapt 'com.android.databinding:compiler:3.1.4'
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
@@ -40,3 +41,5 @@ dependencies {
     implementation 'ai.api:libai:1.6.12'
     implementation 'com.android.support:recyclerview-v7:27.+'
 }
+
+apply plugin: 'com.google.gms.google-services'
