@@ -11,8 +11,12 @@ import android.support.v7.widget.LinearLayoutManager
 import android.text.TextUtils
 import com.example.gyun_home.calcifer.adapter.RecyclerViewAdapter
 import com.example.gyun_home.calcifer.model.MessageDTO
+import com.example.gyun_home.calcifer.model.WeatherDTO
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.gson.Gson
 import kotlinx.android.synthetic.main.activity_main.*
+import okhttp3.*
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -22,6 +26,9 @@ class MainActivity : AppCompatActivity() {
 
     var messageDTOs = ArrayList<MessageDTO>()
     var aiDataService: AIDataService? = null
+
+    var weatherDateFormatFromString = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
+    var weatherDateFormatToString = SimpleDateFormat("MM월 dd일 hh시")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,12 +67,22 @@ class MainActivity : AppCompatActivity() {
 
     fun makeMessage(result: Result) {
         when (result.metadata.intentName) {
+
+            "Weather" -> {
+                var city = result.parameters["geo-city"]
+                if (city == null) {
+                    weatherMessage("서울특별시")
+                } else {
+                    weatherMessage(city.asString)
+                }
+            }
+
             "Schedule" -> {
                 var date = result.parameters["date"]?.asString
-                if(date == null){
+                if (date == null) {
                     var dayOfWeek = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
                     scheduleMessage(dayOfWeek)
-                }else {
+                } else {
                     var dateFromString = dateFormatFromString.parse(date)
 
                     var cal = Calendar.getInstance()
@@ -84,39 +101,79 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    fun scheduleMessage(dayofweek : Int?){
-        var dayOfWeekString : String? = null
-        when (dayofweek){
-            1->{
+    fun weatherMessage(city : String){
+        var weatherUrl = "https://api.openweathermap.org/data/2.5/forecast?id=524901&APPID=6dd85201b495e2749fc41fda4ed8d8c5&q=${city}&units=metric"
+        var request = Request.Builder().url(weatherUrl).build()
+        OkHttpClient().newCall(request).enqueue(object : Callback{
+
+            override fun onFailure(call: Call, e: IOException) {
+
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                var result = response.body()?.string()
+
+                var weatherDTO = Gson().fromJson(result,WeatherDTO::class.java)
+
+                for(item in weatherDTO.list!!){
+                    var weatherItemUnixTime = weatherDateFormatFromString.parse(item.dt_txt).time
+                    if(weatherItemUnixTime > System.currentTimeMillis()){
+                        var temp = item.main?.temp
+
+                        var description = item.weather!![0].description
+
+                        var time = weatherDateFormatToString.format(weatherItemUnixTime)
+
+                        var humidity = item.main?.humidity
+
+                        var message = time + " " + city + "의 기온은 " + temp + "도 하늘은 " + description + " 습도는 "+ humidity + "% 입니다."
+
+                        runOnUiThread {
+                            messageDTOs.add(MessageDTO(false,message))
+
+                            recyclerView.adapter.notifyDataSetChanged()
+                            recyclerView.smoothScrollToPosition(messageDTOs.size-1)
+                        }
+                        break   //가장 가까운 미래의 날씨만 나오게 하기위함
+                    }
+                }
+            }
+
+        })
+    }
+
+    fun scheduleMessage(dayofweek: Int?) {
+        var dayOfWeekString: String? = null
+        when (dayofweek) {
+            1 -> {
                 dayOfWeekString = "일요일"
             }
-            2->{
+            2 -> {
                 dayOfWeekString = "월요일"
             }
-            3->{
+            3 -> {
                 dayOfWeekString = "화요일"
             }
-            4->{
+            4 -> {
                 dayOfWeekString = "수요일"
             }
-            5->{
+            5 -> {
                 dayOfWeekString = "목요일"
             }
-            6->{
+            6 -> {
                 dayOfWeekString = "금요일"
             }
-            7->{
+            7 -> {
                 dayOfWeekString = "토요일"
             }
         }
-        FirebaseFirestore.getInstance().collection("schedules").whereEqualTo("dayofweek",dayOfWeekString).get().addOnCompleteListener {
-            task ->
-            if(task.isSuccessful){
-                for(document in task.result){
-                    var message = dayOfWeekString + "의 수업은 "+document.data["lecture"]+"입니다."
-                    messageDTOs.add(MessageDTO(false,message))
+        FirebaseFirestore.getInstance().collection("schedules").whereEqualTo("dayofweek", dayOfWeekString).get().addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                for (document in task.result) {
+                    var message = dayOfWeekString + "의 수업은 " + document.data["lecture"] + "입니다."
+                    messageDTOs.add(MessageDTO(false, message))
                     recyclerView.adapter.notifyDataSetChanged()
-                    recyclerView.smoothScrollToPosition(messageDTOs.size-1)
+                    recyclerView.smoothScrollToPosition(messageDTOs.size - 1)
                     break
                 }
             }
