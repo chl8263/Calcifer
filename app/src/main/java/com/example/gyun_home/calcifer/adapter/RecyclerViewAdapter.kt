@@ -5,9 +5,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.example.gyun_home.calcifer.R
+import com.example.gyun_home.calcifer.model.MessageDTO
 import kotlinx.android.synthetic.main.item_comment.view.*
+import java.util.*
 
-data class MessageDTO(var myMessage:Boolean? = null , var message:String? = null)
+
 
 class RecyclerViewAdapter(messageDTOs: ArrayList<MessageDTO>) : RecyclerView.Adapter<RecyclerView.ViewHolder>(){
     var messageDTO = messageDTOs

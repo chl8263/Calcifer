@@ -5,13 +5,12 @@ import ai.api.AIDataService
 import ai.api.model.AIRequest
 import ai.api.model.Result
 import android.os.AsyncTask
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.text.TextUtils
-import android.util.Log
-import com.example.gyun_home.calcifer.adapter.MessageDTO
 import com.example.gyun_home.calcifer.adapter.RecyclerViewAdapter
+import com.example.gyun_home.calcifer.model.MessageDTO
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
 import java.text.SimpleDateFormat
@@ -21,7 +20,7 @@ class MainActivity : AppCompatActivity() {
 
     var dateFormatFromString = SimpleDateFormat("yyyy-MM-dd")
 
-    var messageDTOs = arrayListOf<MessageDTO>()
+    var messageDTOs = ArrayList<MessageDTO>()
     var aiDataService: AIDataService? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,12 +62,17 @@ class MainActivity : AppCompatActivity() {
         when (result.metadata.intentName) {
             "Schedule" -> {
                 var date = result.parameters["date"]?.asString
-                var dateFromString = dateFormatFromString.parse(date)
+                if(date == null){
+                    var dayOfWeek = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+                    scheduleMessage(dayOfWeek)
+                }else {
+                    var dateFromString = dateFormatFromString.parse(date)
 
-                var cal = Calendar.getInstance()
-                cal.time = dateFromString
-                var dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-                scheduleMessage(dayOfWeek)
+                    var cal = Calendar.getInstance()
+                    cal.time = dateFromString
+                    var dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+                    scheduleMessage(dayOfWeek)
+                }
             }
             else -> {
                 var speech = result.fulfillment.speech
@@ -105,7 +109,7 @@ class MainActivity : AppCompatActivity() {
                 dayOfWeekString = "토요일"
             }
         }
-        FirebaseFirestore.getInstance().collection("schedules").whereEqualTo("datofweek",dayOfWeekString).get().addOnCompleteListener { 
+        FirebaseFirestore.getInstance().collection("schedules").whereEqualTo("dayofweek",dayOfWeekString).get().addOnCompleteListener {
             task ->
             if(task.isSuccessful){
                 for(document in task.result){
