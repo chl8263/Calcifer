@@ -219,3 +219,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+//api.openweathermap.org/data/2.5/forecast?id=524901&APPID=6dd85201b495e2749fc41fda4ed8d8c5&q=Seoul&units=metric
