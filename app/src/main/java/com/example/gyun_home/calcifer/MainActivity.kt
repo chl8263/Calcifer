@@ -30,6 +30,12 @@ class MainActivity : AppCompatActivity() {
     var weatherDateFormatFromString = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
     var weatherDateFormatToString = SimpleDateFormat("MM월 dd일 hh시")
 
+    val initChatBotText : String = "시간표 와 날씨, 음식 메뉴를 알려주는 챗봇 입니다."
+    val initChatBotHello : String = "반갑다고 인사해주세요!"
+    val initChatBotSchedule : String = "시간표 예시 : 월요일 수업좀 알려줘"
+    val initChatBotWeather : String = "날씨 예시 : 서울 날씨는?"
+    val initChatBotMenu : String = "음식 메뉴 예시 : 내일 점심은?"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -38,6 +44,15 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         var config = AIConfiguration("5fd84bf2f6074a85b4c781c55eb6b381", AIConfiguration.SupportedLanguages.Korean)
         aiDataService = AIDataService(config)
+
+
+        messageDTOs.add(MessageDTO(false, initChatBotText))
+        messageDTOs.add(MessageDTO(false, initChatBotHello))
+        messageDTOs.add(MessageDTO(false, initChatBotSchedule))
+        messageDTOs.add(MessageDTO(false, initChatBotWeather))
+        messageDTOs.add(MessageDTO(false, initChatBotMenu))
+        recyclerView.adapter.notifyDataSetChanged()
+        recyclerView.smoothScrollToPosition(messageDTOs.size - 1)
 
         button.setOnClickListener {
             if (!TextUtils.isEmpty(editText.text)) {
@@ -91,6 +106,16 @@ class MainActivity : AppCompatActivity() {
                     scheduleMessage(dayOfWeek)
                 }
             }
+            "Meal" ->{
+                var meal = result.parameters["meal"]?.asString
+                var date = result.parameters["date"]?.asString
+
+                if(date == null){
+                    dateFormatFromString.format(Date())
+                }
+
+                mealMessage(meal,date)
+            }
             else -> {
                 var speech = result.fulfillment.speech
                 messageDTOs.add(MessageDTO(false, speech))
@@ -100,11 +125,25 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+    fun mealMessage(meal: String? , date : String?){
+        FirebaseFirestore.getInstance().collection("meals").whereEqualTo("mealtime",meal).whereEqualTo("date",date).get().addOnCompleteListener {
+            task ->
+                if(task.isSuccessful){
+                    for(document in task.result){
 
+                        var message = "메뉴는 ${document.data["menu"]} 입니다"
+                        messageDTOs.add(MessageDTO(false,message))
+                        recyclerView.adapter.notifyDataSetChanged()
+                        recyclerView.smoothScrollToPosition(messageDTOs.size - 1)
+                        break
+                    }
+                }
+        }
+    }
     fun weatherMessage(city : String){
         var weatherUrl = "https://api.openweathermap.org/data/2.5/forecast?id=524901&APPID=6dd85201b495e2749fc41fda4ed8d8c5&q=${city}&units=metric"
         var request = Request.Builder().url(weatherUrl).build()
-        OkHttpClient().newCall(request).enqueue(object : Callback{
+        OkHttpClient().newCall(request).enqueue(object : Callback{  //okhttp 는 sub Thread로 동작함
 
             override fun onFailure(call: Call, e: IOException) {
 
