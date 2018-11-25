@@ -205,6 +205,7 @@ class MainActivity : AppCompatActivity() {
             7 -> {
                 dayOfWeekString = "토요일"
             }
+
         }
         FirebaseFirestore.getInstance().collection("schedules").whereEqualTo("dayofweek", dayOfWeekString).get().addOnCompleteListener { task ->
             if (task.isSuccessful) {
