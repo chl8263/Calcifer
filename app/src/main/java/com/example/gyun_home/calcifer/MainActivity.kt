@@ -182,6 +182,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun scheduleMessage(dayofweek: Int?) {
+
         var dayOfWeekString: String? = null
         when (dayofweek) {
             1 -> {
